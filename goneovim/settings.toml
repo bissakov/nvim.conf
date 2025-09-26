@@ -1,0 +1,26 @@
+[Editor]
+IgnoreSaveConfirmationWithCloseButton = false
+BorderlessWindow = true
+HideTitlebar = false
+Gap = 15
+
+LineToScroll = 30
+MouseScrollingUnit = "line"
+StartMaximizedWindow = true
+RestoreWindowGeometry = false
+FontFamily = "Fira Code"
+FontSize = 14
+
+CachedDrawing = true
+CacheSize = 10000
+DisableLigatures = true
+Clipboard = true
+
+[Cursor]
+SmoothMove = false
+Duration = 0
+
+[ScrollBar]
+Visible = true
+
+RestoreSession = false
