@@ -182,19 +182,6 @@ require('lazy').setup({
       vim.cmd 'colorscheme kanagawa'
     end,
   },
-  -- {
-  --   'lewis6991/gitsigns.nvim',
-  --   event = { 'BufReadPre' },
-  --   opts = {
-  --     signs = {
-  --       add = { text = '+' },
-  --       change = { text = '~' },
-  --       delete = { text = '_' },
-  --       topdelete = { text = '‾' },
-  --       changedelete = { text = '~' },
-  --     },
-  --   },
-  -- },
   {
     'mg979/vim-visual-multi',
     event = { 'BufReadPre' },
