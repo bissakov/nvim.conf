@@ -97,6 +97,36 @@ vim.keymap.set('n', '<C-j>', '<C-w><C-j>', { desc = 'Move focus to the lower win
 vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper window' })
 vim.keymap.set('n', '<C-w>h', '<cmd>split<CR>', { desc = 'Split window horizontally' })
 
+vim.keymap.set('n', '<leader>fw', function()
+  local ok, result = pcall(function()
+    return vim.api.nvim_exec2('messages', { output = true }).output
+  end)
+  if not ok then
+    result = vim.api.nvim_exec('messages', true)
+  end
+
+  local lines = vim.split(result, '\n', { plain = true })
+
+  local buf = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+
+  local width = math.max(60, math.floor(vim.o.columns * 0.6))
+  local height = math.min(#lines, math.floor(vim.o.lines * 0.5))
+
+  local row = math.floor((vim.o.lines - height) / 2)
+  local col = math.floor((vim.o.columns - width) / 2)
+
+  vim.api.nvim_open_win(buf, true, {
+    relative = 'editor',
+    width = width,
+    height = height,
+    row = row,
+    col = col,
+    style = 'minimal',
+    border = 'rounded',
+  })
+end, { desc = 'Show :messages in a floating window' })
+
 vim.api.nvim_create_autocmd('TextYankPost', {
   desc = 'Highlight when yanking (copying) text',
   group = vim.api.nvim_create_augroup('kickstart-highlight-yank', { clear = true }),
@@ -170,6 +200,15 @@ local rtp = vim.opt.rtp
 rtp:prepend(lazypath)
 
 require('lazy').setup({
+  {
+    'folke/lazydev.nvim',
+    ft = 'lua',
+    opts = {
+      library = {
+        { path = '${3rd}/luv/library', words = { 'vim%.uv' } },
+      },
+    },
+  },
   {
     'rebelot/kanagawa.nvim',
     priority = 1000,
@@ -385,7 +424,12 @@ require('lazy').setup({
       do
         local servers = {
           basedpyright = {
-            cmd = { 'basedpyright-langserver', '--stdio', '--threads', #vim.uv.cpu_info() / 2 },
+            cmd = {
+              'basedpyright-langserver',
+              '--stdio',
+              '--threads',
+              tostring(#vim.uv.cpu_info() / 2),
+            },
             settings = {
               basedpyright = {
                 disableOrganizeImports = true,
@@ -423,6 +467,7 @@ require('lazy').setup({
                     vim.env.VIMRUNTIME,
                     '${3rd}/luv/library',
                     '${3rd}/busted/library',
+                    vim.fn.stdpath 'data' .. '/lazy',
                   },
                 },
               })
@@ -594,6 +639,18 @@ require('lazy').setup({
         python = { 'ruff' },
         c = { 'cpplint', 'clangtidy' },
         cpp = { 'cpplint', 'clangtidy' },
+        lua = { 'selene' },
+      }
+
+      local selene = lint.linters.selene
+      selene.args = {
+        '--config',
+        vim.fn.stdpath 'config' .. 'selene.toml',
+        '--num-threads',
+        tostring(#vim.uv.cpu_info() / 2),
+        '--display-style',
+        'json',
+        '-',
       }
 
       local lint_augroup = vim.api.nvim_create_augroup('lint', { clear = true })
