@@ -151,7 +151,7 @@ vim.api.nvim_create_autocmd({ 'BufNewFile', 'BufRead' }, {
 })
 
 local lazypath = vim.fn.stdpath 'data' .. '/lazy/lazy.nvim'
-if not (vim.uv or vim.loop).fs_stat(lazypath) then
+if not vim.uv.fs_stat(lazypath) then
   local lazyrepo = 'https://github.com/folke/lazy.nvim.git'
   local out = vim.fn.system {
     'git',
@@ -348,10 +348,7 @@ require('lazy').setup({
           end
 
           local client = vim.lsp.get_client_by_id(event.data.client_id)
-          if
-            client
-            and client:supports_method(client, vim.lsp.protocol.Methods.textDocument_documentHighlight, event.buf)
-          then
+          if client and client:supports_method(vim.lsp.protocol.Methods.textDocument_documentHighlight, event.buf) then
             local highlight_augroup = vim.api.nvim_create_augroup('kickstart-lsp-highlight', { clear = false })
             vim.api.nvim_create_autocmd({ 'CursorHold', 'CursorHoldI' }, {
               buffer = event.buf,
@@ -377,7 +374,7 @@ require('lazy').setup({
             })
           end
 
-          if client and client:supports_method(client, vim.lsp.protocol.Methods.textDocument_inlayHint, event.buf) then
+          if client and client:supports_method(vim.lsp.protocol.Methods.textDocument_inlayHint, event.buf) then
             map('<leader>th', function()
               vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled { bufnr = event.buf })
             end, '[T]oggle Inlay [H]ints')
@@ -405,6 +402,31 @@ require('lazy').setup({
             },
           },
           lua_ls = {
+            on_init = function(client)
+              if client.workspace_folders then
+                local path = client.workspace_folders[1].name
+                if
+                  path ~= vim.fn.stdpath 'config'
+                  and (vim.uv.fs_stat(path .. '/.luarc.json') or vim.uv.fs_stat(path .. '/.luarc.jsonc'))
+                then
+                  return
+                end
+              end
+
+              client.config.settings.Lua = vim.tbl_deep_extend('force', client.config.settings.Lua, {
+                runtime = {
+                  version = 'LuaJIT',
+                },
+                workspace = {
+                  checkThirdParty = false,
+                  library = {
+                    vim.env.VIMRUNTIME,
+                    '${3rd}/luv/library',
+                    '${3rd}/busted/library',
+                  },
+                },
+              })
+            end,
             settings = {
               Lua = {
                 diagnostics = {
@@ -495,9 +517,9 @@ require('lazy').setup({
           local cwd = vim.fn.getcwd()
           local config_path = nil
 
-          if vim.loop.fs_stat(cwd .. '/ruff.toml') then
+          if vim.uv.fs_stat(cwd .. '/ruff.toml') then
             config_path = cwd .. '/ruff.toml'
-          elseif vim.loop.fs_stat(cwd .. '/pyproject.toml') then
+          elseif vim.uv.fs_stat(cwd .. '/pyproject.toml') then
             config_path = cwd .. '/pyproject.toml'
           end
 
@@ -625,7 +647,7 @@ require('lazy').setup({
     },
   },
   {
-    'echasnovski/mini.nvim',
+    'nvim-mini/mini.nvim',
     event = { 'BufReadPre' },
     config = function()
       require('mini.surround').setup()
