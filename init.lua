@@ -385,7 +385,7 @@ require('lazy').setup({
       do
         local servers = {
           basedpyright = {
-            cmd = { 'basedpyright-langserver', '--stdio', '--threads', '4' },
+            cmd = { 'basedpyright-langserver', '--stdio', '--threads', #vim.uv.cpu_info() / 2 },
             settings = {
               basedpyright = {
                 disableOrganizeImports = true,
@@ -693,20 +693,6 @@ require('lazy').setup({
   },
 }, {
   ui = {
-    icons = vim.g.have_nerd_font and {} or {
-      cmd = '⌘',
-      config = '🛠',
-      event = '📅',
-      ft = '📂',
-      init = '⚙',
-      keys = '🗝',
-      plugin = '🔌',
-      runtime = '💻',
-      require = '🌙',
-      source = '📄',
-      start = '🚀',
-      task = '📌',
-      lazy = '💤 ',
-    },
+    icons = {},
   },
 })
