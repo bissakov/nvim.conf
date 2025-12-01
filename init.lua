@@ -19,6 +19,7 @@ vim.o.showmode = true
 
 vim.o.clipboard = 'unnamedplus'
 
+vim.o.winborder = 'rounded'
 vim.o.breakindent = true
 vim.o.undofile = true
 vim.o.ignorecase = true
@@ -82,7 +83,7 @@ vim.keymap.set('v', 'p', '"_dP', { desc = 'Paste without yanking' })
 vim.keymap.set('n', 'gb', '<c-o>', { desc = '[G]o [B]ack' })
 vim.keymap.set({ 'n', 'v' }, 'qq', ':bp<bar>bd #<CR>', { desc = 'Close current buffer and go to previous' })
 
-vim.keymap.set('n', '<C-d>', 'yyp', { desc = 'Duplicate current line [D]own' })
+vim.keymap.set('n', '<C-d>', ':t.<CR>', { desc = 'Duplicate current line [D]own' })
 vim.keymap.set('n', '<C-a>', 'ggVG', { desc = 'Select all [A]' })
 
 vim.keymap.set({ 'i', 'n', 'v' }, '<F1>', function() end, { desc = 'Disable documentation' })
@@ -102,7 +103,8 @@ vim.keymap.set('n', '<leader>fw', function()
     return vim.api.nvim_exec2('messages', { output = true }).output
   end)
   if not ok then
-    result = vim.api.nvim_exec('messages', true)
+    print 'Calling :messages command failed'
+    return
   end
 
   local lines = vim.split(result, '\n', { plain = true })
@@ -129,7 +131,7 @@ end, { desc = 'Show :messages in a floating window' })
 
 vim.api.nvim_create_autocmd('TextYankPost', {
   desc = 'Highlight when yanking (copying) text',
-  group = vim.api.nvim_create_augroup('kickstart-highlight-yank', { clear = true }),
+  group = vim.api.nvim_create_augroup('highlight-yank', { clear = true }),
   callback = function()
     vim.hl.on_yank()
   end,
@@ -139,7 +141,7 @@ vim.api.nvim_create_autocmd({ 'BufNewFile', 'BufRead' }, {
   pattern = { '*.c', '*.cpp', '*.h', '*.hpp' },
   callback = function()
     vim.bo.commentstring = '// %s'
-    vim.keymap.set('n', '<F1>', ':ClangdSwitchSourceHeader<cr>', { desc = 'ClangdSwitchSourceHeader' })
+    vim.keymap.set('n', '<F1>', ':LspClangdSwitchSourceHeader <cr>', { desc = 'LspClangdSwitchSourceHeader ' })
   end,
 })
 
@@ -196,8 +198,7 @@ if not vim.uv.fs_stat(lazypath) then
   end
 end
 
-local rtp = vim.opt.rtp
-rtp:prepend(lazypath)
+vim.opt.rtp:prepend(lazypath)
 
 require('lazy').setup({
   {
@@ -224,6 +225,39 @@ require('lazy').setup({
   {
     'mg979/vim-visual-multi',
     event = { 'BufReadPre' },
+  },
+  {
+    'OXY2DEV/markview.nvim',
+    lazy = false,
+  },
+  {
+    'nvim-treesitter/nvim-treesitter',
+    main = 'nvim-treesitter.configs',
+    branch = 'master',
+    lazy = false,
+    build = ':TSUpdate',
+    opts = {
+      ensure_installed = {
+        'c',
+        'cpp',
+        'lua',
+        'python',
+        'vim',
+        'vimdoc',
+        'query',
+        'markdown',
+        'markdown_inline',
+      },
+      auto_install = true,
+      sync_install = false,
+      indent = {
+        enable = true,
+      },
+      highlight = {
+        enable = true,
+        additional_vim_regex_highlighting = false,
+      },
+    },
   },
   {
     'folke/which-key.nvim',
@@ -288,6 +322,8 @@ require('lazy').setup({
         },
       }
 
+      fzf.register_ui_select()
+
       vim.keymap.set('n', '<leader>sk', fzf.keymaps, { desc = '[S]earch [K]eymaps' })
       vim.keymap.set('n', '<leader>sf', fzf.files, { desc = '[S]earch [F]iles' })
       vim.keymap.set('n', '<leader>ss', fzf.builtin, { desc = '[S]earch [S]elect Telescope' })
@@ -330,11 +366,11 @@ require('lazy').setup({
     dependencies = {
       {
         'mason-org/mason.nvim',
+        dependencies = { 'ibhagwan/fzf-lua' },
         cmd = 'Mason',
         opts = {},
       },
       'saghen/blink.cmp',
-      'ibhagwan/fzf-lua',
     },
     config = function()
       vim.diagnostic.config {
@@ -365,7 +401,7 @@ require('lazy').setup({
       }
 
       vim.api.nvim_create_autocmd('LspAttach', {
-        group = vim.api.nvim_create_augroup('kickstart-lsp-attach', { clear = true }),
+        group = vim.api.nvim_create_augroup('lsp-attach', { clear = true }),
         callback = function(event)
           local map = function(keys, func, desc, mode)
             mode = mode or 'n'
@@ -388,7 +424,7 @@ require('lazy').setup({
 
           local client = vim.lsp.get_client_by_id(event.data.client_id)
           if client and client:supports_method(vim.lsp.protocol.Methods.textDocument_documentHighlight, event.buf) then
-            local highlight_augroup = vim.api.nvim_create_augroup('kickstart-lsp-highlight', { clear = false })
+            local highlight_augroup = vim.api.nvim_create_augroup('lsp-highlight', { clear = false })
             vim.api.nvim_create_autocmd({ 'CursorHold', 'CursorHoldI' }, {
               buffer = event.buf,
               group = highlight_augroup,
@@ -402,11 +438,11 @@ require('lazy').setup({
             })
 
             vim.api.nvim_create_autocmd('LspDetach', {
-              group = vim.api.nvim_create_augroup('kickstart-lsp-detach', { clear = true }),
+              group = vim.api.nvim_create_augroup('lsp-detach', { clear = true }),
               callback = function(event2)
                 vim.lsp.buf.clear_references()
                 vim.api.nvim_clear_autocmds {
-                  group = 'kickstart-lsp-highlight',
+                  group = 'lsp-highlight',
                   buffer = event2.buf,
                 }
               end,
@@ -501,6 +537,9 @@ require('lazy').setup({
               semanticHighlighting = true,
             },
           },
+
+          cmake = {},
+          glsl_analyzer = {},
         }
 
         local capabilities = require('blink.cmp').get_lsp_capabilities()
@@ -525,7 +564,7 @@ require('lazy').setup({
       formatters_by_ft = {
         lua = { 'stylua' },
         python = {
-          'isort',
+          'rsort',
           'ruff_format',
         },
         json = { 'jq', 'prettierd', 'prettier' },
@@ -533,12 +572,14 @@ require('lazy').setup({
         cmake = { 'cmake_format' },
         c = { 'clang-format' },
         cpp = { 'clang-format' },
+        cs = { 'clang-format' },
         htmldjango = { 'djlint' },
         css = { 'prettierd', 'prettier' },
         javascript = { 'prettierd', 'prettier' },
         typescript = { 'prettierd', 'prettier' },
         yaml = { 'prettierd', 'prettier' },
         zig = { 'zigfmt' },
+        glsl = { 'glsl_analyzer' },
       },
     },
 
@@ -546,15 +587,12 @@ require('lazy').setup({
       local conform = require 'conform'
       conform.setup(opts)
 
-      conform.formatters.isort = {
-        args = function(_, _)
-          return {
-            '--stdout',
-            '--filename',
-            '$FILENAME',
-            '-',
-          }
-        end,
+      conform.formatters.rsort = {
+        command = 'cmd',
+        args = { '/C', 'ruff check --select I --fix - | ruff format -' },
+        stdin = true,
+        cwd = require('conform.util').root_file { '.editorconfig', 'package.json' },
+        require_cwd = true,
       }
 
       conform.formatters.ruff_format = {
@@ -707,7 +745,6 @@ require('lazy').setup({
     'nvim-mini/mini.nvim',
     event = { 'BufReadPre' },
     config = function()
-      require('mini.surround').setup()
       require('mini.pairs').setup()
       require('mini.trailspace').setup()
 
